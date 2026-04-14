@@ -55,13 +55,27 @@ git clone https://github.com/santmun/mega-sistema-ia.git
 cd mega-sistema-ia
 ```
 
-### Paso 2: Abre el proyecto en tu editor con Claude Code
+### Paso 2: Crea el tipo de evento en Cal.com (OBLIGATORIO)
+
+Antes de correr el setup, entra a [Cal.com](https://app.cal.com) y crea un **Event Type** que represente la cita que el agente va a agendar. Por ejemplo:
+
+- Inmobiliaria: "Visita a propiedad" (45 min)
+- Clinica dental: "Consulta dental" (30 min)
+- Despacho de abogados: "Consulta inicial" (1 hora)
+- Gimnasio: "Prueba gratis" (1 hora)
+- Restaurante: "Reservacion" (2 horas)
+
+Copia el ID del evento (lo encuentras en la URL cuando lo abres — es el numero al final). Lo vas a necesitar en el paso 4 para la variable `CAL_EVENT_TYPE_ID` del `.env`.
+
+> Sin este paso, el agente no puede agendar citas y el endpoint `/book-appointment` devuelve error.
+
+### Paso 3: Abre el proyecto en tu editor con Claude Code
 
 ```bash
 claude
 ```
 
-### Paso 3: Corre el setup
+### Paso 4: Corre el setup
 
 ```
 /setup
@@ -69,10 +83,10 @@ claude
 
 Claude te va a guiar paso a paso:
 - Te pregunta los datos del negocio
-- Te ayuda a conseguir las credenciales de cada servicio
+- Te ayuda a conseguir las credenciales de cada servicio (incluyendo `CAL_EVENT_TYPE_ID`)
 - Configura todo automaticamente
 
-### Paso 4: Verifica que todo funciona
+### Paso 5: Verifica que todo funciona
 
 ```
 /test
@@ -80,7 +94,7 @@ Claude te va a guiar paso a paso:
 
 Si los 5 checks pasan, tu agente esta listo.
 
-### Paso 5: Prueba tu agente
+### Paso 6: Prueba tu agente
 
 Llama al numero de telefono que configuraste. Tu agente virtual va a contestar.
 

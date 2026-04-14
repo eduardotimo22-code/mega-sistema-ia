@@ -44,14 +44,52 @@ CRM_PRODUCT_NAME = _config_crm.get("product_name") or TEMPLATE.get("product_labe
 CRM_PRODUCT_FIELDS = _config_crm.get("product_fields") or TEMPLATE.get("crm_fields", {}).get("product_fields", [])
 CRM_LEAD_EXTRA_FIELDS = _config_crm.get("lead_extra_fields") or TEMPLATE.get("crm_fields", {}).get("lead_extra_fields", [])
 
-# --- Prompts (del template, con variables para reemplazar) ---
+# --- Reglas universales que se agregan a TODOS los prompts ---
+# Estas reglas previenen bugs comunes en produccion:
+# - Pronunciacion robotica ("MXN", "6.2 millones", "m2")
+# - Listas eternas que cansan al cliente
+# - Saludos artificiales ("hablo con Cliente?")
+# - Validacion deficiente de datos
+
+PRONUNCIATION_RULES = """
+
+---
+## Reglas de pronunciacion obligatorias
+- Nunca digas "MXN" ni "USD". Di "pesos", "pesos mexicanos" o "dolares".
+- Nunca uses formato decimal ni abreviado para precios:
+  - MAL: "6.2 millones" -> BIEN: "seis millones doscientos mil pesos"
+  - MAL: "850k" -> BIEN: "ochocientos cincuenta mil pesos"
+  - MAL: "$1.5M" -> BIEN: "un millon quinientos mil pesos"
+- Precios de renta, mensualidades o membresias: siempre agrega "al mes" al final.
+- Medidas: di "metros cuadrados", no "m2" ni "m cuadrados".
+
+## Conversacion natural
+- NUNCA enlistes mas de 3 opciones seguidas. Si hay mas, menciona 2-3 y pregunta si quiere escuchar mas.
+- NUNCA presentes mas de 2 alternativas (productos, servicios, propiedades, tratamientos) juntas.
+- Usa muletillas naturales para sonar humano: "mire", "dejeme ver", "claro que si", "permitame".
+- Si no conoces el nombre del cliente, NO digas literalmente "¿hablo con Cliente?".
+  Pregunta naturalmente: "¿con quien tengo el gusto?" o "¿me podria dar su nombre?".
+
+## Validacion de datos (muy importante)
+- Telefonos mexicanos tienen 10 digitos. Si el cliente da menos digitos, repite cada digito y pide confirmacion.
+- Emails: siempre confirma deletreando letra por letra antes de guardar.
+- Fechas: confirma incluyendo el dia de la semana (ej: "lunes 15 de abril").
+- Horas: siempre confirma AM o PM para evitar confusiones.
+"""
+
+OUTBOUND_DIRECTIVE = """TU ESTAS LLAMANDO AL CLIENTE (no al reves). En todo momento TU tomas la iniciativa y explicas por que le llamas. NUNCA digas "¿en que le puedo ayudar?" — esa frase es solo de llamadas entrantes (inbound).
+
+"""
+
+
+# --- Prompts (del template, con variables + reglas universales) ---
 def get_inbound_prompt() -> str:
     raw = TEMPLATE.get("inbound_prompt", "")
-    return _replace_variables(raw)
+    return _replace_variables(raw) + PRONUNCIATION_RULES
 
 def get_outbound_prompt() -> str:
     raw = TEMPLATE.get("outbound_prompt", "")
-    return _replace_variables(raw)
+    return OUTBOUND_DIRECTIVE + _replace_variables(raw) + PRONUNCIATION_RULES
 
 def get_post_call_prompt() -> str:
     raw = TEMPLATE.get("post_call_analysis", "")

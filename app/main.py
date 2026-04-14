@@ -86,7 +86,13 @@ def create_lead(request: dict):
 
 @web_app.post("/book-appointment")
 def book_appointment(request: dict):
-    """Agenda una cita (generico: visita, consulta, prueba, reservacion)."""
+    """Agenda una cita (generico: visita, consulta, prueba, reservacion).
+
+    Usa CAL_EVENT_TYPE_ID del .env como default si el agente no especifica uno.
+    Envuelto en try/except para que el agente NUNCA le mienta al cliente
+    diciendo "ya quedo agendado" cuando la llamada a Cal.com fallo.
+    """
+    import os as _os
     from app.services.calcom_service import create_booking, get_available_slots
     from app.services.notion_service import find_lead_by_phone, update_lead
 
@@ -94,39 +100,86 @@ def book_appointment(request: dict):
     phone = args.get("phone", "")
     name = args.get("name", "")
     email = args.get("email", "cliente@negocio.com")
-    event_type_id = int(args.get("event_type_id", 0))
+
+    # Usa CAL_EVENT_TYPE_ID del env como default — el alumno lo configura en .env
+    # para que el agente no necesite saber el ID hardcodeado.
+    default_event_type = _os.environ.get("CAL_EVENT_TYPE_ID", "")
+    event_type_id_raw = args.get("event_type_id") or default_event_type
+    try:
+        event_type_id = int(event_type_id_raw) if event_type_id_raw else 0
+    except (TypeError, ValueError):
+        event_type_id = 0
+
+    if not event_type_id:
+        return {
+            "status": "error",
+            "message": (
+                "No hay un tipo de evento configurado en Cal.com. "
+                "Dile al cliente que un asesor humano se va a comunicar para "
+                "confirmar la cita."
+            ),
+            "error_detail": "CAL_EVENT_TYPE_ID no esta en .env",
+        }
+
     preferred_date = args.get("preferred_date", "")
     preferred_time = args.get("preferred_time", "")
 
     if preferred_date and preferred_time:
         start = f"{preferred_date}T{preferred_time}:00"
-        booking = create_booking(
-            event_type_id=event_type_id,
-            start=start,
-            name=name,
-            email=email,
-        )
+
+        try:
+            booking = create_booking(
+                event_type_id=event_type_id,
+                start=start,
+                name=name,
+                email=email,
+            )
+        except Exception as e:
+            # Critico: si Cal.com falla, NO confirmamos al cliente.
+            # El agente debe ser honesto y ofrecer seguimiento humano.
+            return {
+                "status": "error",
+                "message": (
+                    "No se pudo agendar la cita en este momento. Dile al cliente "
+                    "honestamente que hubo un problema tecnico y que un asesor "
+                    "humano se va a comunicar para confirmar la cita."
+                ),
+                "error_detail": str(e)[:300],
+            }
 
         if phone:
-            lead = find_lead_by_phone(phone)
-            if lead:
-                from app.config import TEMPLATE
-                action_label = TEMPLATE.get("action_label", "Cita agendada")
-                update_lead(
-                    page_id=lead["id"],
-                    estatus="Cita agendada",
-                    siguiente_accion=f"{action_label}: {preferred_date} {preferred_time}",
-                )
+            try:
+                lead = find_lead_by_phone(phone)
+                if lead:
+                    from app.config import TEMPLATE
+                    action_label = TEMPLATE.get("action_label", "Cita agendada")
+                    update_lead(
+                        page_id=lead["id"],
+                        estatus="Cita agendada",
+                        siguiente_accion=f"{action_label}: {preferred_date} {preferred_time}",
+                    )
+            except Exception as e:
+                print(f"[book_appointment] Cita agendada pero no se pudo actualizar lead: {e}")
 
         return {"status": "ok", "booking": booking}
 
     if preferred_date:
-        slots = get_available_slots(
-            event_type_id=event_type_id,
-            start_date=preferred_date,
-            end_date=preferred_date,
-        )
-        return {"status": "ok", "available_slots": slots}
+        try:
+            slots = get_available_slots(
+                event_type_id=event_type_id,
+                start_date=preferred_date,
+                end_date=preferred_date,
+            )
+            return {"status": "ok", "available_slots": slots}
+        except Exception as e:
+            return {
+                "status": "error",
+                "message": (
+                    "No se pudo consultar disponibilidad en este momento. "
+                    "Dile al cliente que un asesor humano le llama en breve."
+                ),
+                "error_detail": str(e)[:300],
+            }
 
     return {"status": "error", "message": "Se necesita al menos preferred_date"}
 

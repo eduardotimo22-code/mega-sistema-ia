@@ -8,7 +8,15 @@ function headers() {
   };
 }
 
+function isConfigured(): boolean {
+  return Boolean(process.env.NOTION_API_KEY && process.env.NOTION_LEADS_DB_ID);
+}
+
 async function queryDatabase(dbId: string, filter?: object, pageSize = 100) {
+  if (!isConfigured() || !dbId) {
+    return { results: [] };
+  }
+
   const body: Record<string, unknown> = { page_size: pageSize };
   if (filter) body.filter = filter;
 
@@ -19,7 +27,10 @@ async function queryDatabase(dbId: string, filter?: object, pageSize = 100) {
     next: { revalidate: 30 },
   });
 
-  if (!res.ok) throw new Error(`Notion ${res.status}: ${await res.text()}`);
+  if (!res.ok) {
+    console.warn(`[Notion] ${res.status}: ${await res.text()}`);
+    return { results: [] };
+  }
   return res.json();
 }
 
