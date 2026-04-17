@@ -17,12 +17,18 @@ def validate_retell() -> tuple[bool, str]:
     if not api_key:
         return False, "RETELL_API_KEY no esta configurada en .env"
     try:
-        from retell import Retell
-        client = Retell(api_key=api_key)
-        agents = client.agent.list()
-        return True, f"Conectado — {len(agents)} agentes encontrados"
+        import requests
+        resp = requests.get(
+            "https://api.retellai.com/list-agents",
+            headers={"Authorization": f"Bearer {api_key}"},
+            timeout=10,
+        )
+        if resp.status_code == 200:
+            agents = resp.json()
+            return True, f"Conectado — {len(agents)} agentes encontrados"
+        return False, f"API key invalida (status {resp.status_code}) — ve a retellai.com/dashboard"
     except Exception as e:
-        return False, f"API key invalida — ve a retellai.com/dashboard y copia tu key. Error: {e}"
+        return False, f"Error de conexion: {e}"
 
 
 def validate_twilio() -> tuple[bool, str]:
@@ -36,12 +42,18 @@ def validate_twilio() -> tuple[bool, str]:
     if not phone:
         return False, "TWILIO_PHONE_NUMBER no esta en .env"
     try:
-        from twilio.rest import Client
-        client = Client(sid, token)
-        account = client.api.accounts(sid).fetch()
-        return True, f"Conectado — cuenta: {account.friendly_name}"
+        import requests
+        resp = requests.get(
+            f"https://api.twilio.com/2010-04-01/Accounts/{sid}.json",
+            auth=(sid, token),
+            timeout=10,
+        )
+        if resp.status_code == 200:
+            name = resp.json().get("friendly_name", "OK")
+            return True, f"Conectado — cuenta: {name}"
+        return False, f"Credenciales invalidas (status {resp.status_code}) — ve a console.twilio.com"
     except Exception as e:
-        return False, f"Credenciales invalidas — ve a console.twilio.com. Error: {e}"
+        return False, f"Error de conexion: {e}"
 
 
 def validate_notion() -> tuple[bool, str]:
@@ -94,17 +106,23 @@ def validate_anthropic() -> tuple[bool, str]:
     if not api_key:
         return False, "ANTHROPIC_API_KEY no esta en .env"
     try:
-        import anthropic
-        client = anthropic.Anthropic(api_key=api_key)
-        # Hacer una llamada minima para verificar
-        msg = client.messages.create(
-            model="claude-haiku-4-5-20251001",
-            max_tokens=10,
-            messages=[{"role": "user", "content": "ping"}],
+        import requests
+        resp = requests.post(
+            "https://api.anthropic.com/v1/messages",
+            headers={
+                "x-api-key": api_key,
+                "anthropic-version": "2023-06-01",
+                "content-type": "application/json",
+            },
+            json={"model": "claude-haiku-4-5-20251001", "max_tokens": 1, "messages": [{"role": "user", "content": "hi"}]},
+            timeout=10,
         )
-        return True, "Conectado"
-    except anthropic.AuthenticationError:
-        return False, "API key invalida — ve a console.anthropic.com y copia tu key"
+        if resp.status_code == 200:
+            return True, "Conectado"
+        elif resp.status_code == 401:
+            return False, "API key invalida — ve a console.anthropic.com y copia tu key"
+        else:
+            return False, f"Error {resp.status_code}: {resp.text[:100]}"
     except Exception as e:
         return False, f"Error: {e}"
 

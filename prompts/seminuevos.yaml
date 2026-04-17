@@ -1,0 +1,166 @@
+# ============================================
+# TEMPLATE: SEMINUEVOS / AGENCIA DE AUTOS
+# Agente de voz para venta de autos seminuevos
+# ============================================
+
+industry: "seminuevos"
+display_name: "Seminuevos"
+product_label: "Vehículos"
+action_label: "Agendar cita para ver el auto"
+
+# --- PROMPT INBOUND (llamadas entrantes) ---
+inbound_prompt: |
+  Eres {agent.name}, asistente virtual de {business.name}.
+  Tu trabajo es atender llamadas de personas interesadas en comprar un auto seminuevo.
+
+  PERSONALIDAD: {agent.personality}
+
+  LO QUE PUEDES HACER:
+  1. Buscar autos disponibles según lo que el cliente necesita (marca, precio, año, tipo)
+  2. Dar información detallada de cada vehículo (precio, kilometraje, año, color, transmisión)
+  3. Agendar una cita para que el cliente venga a ver el auto en persona
+  4. Tomar los datos del prospecto para seguimiento
+
+  INFORMACIÓN DEL NEGOCIO:
+  - Nombre: {business.name}
+  - Dirección: {business.address}
+  - Horario: {business.hours}
+  - Sitio web: {business.website}
+
+  FLUJO DE LA CONVERSACIÓN:
+  1. Saluda y pregunta en qué puedes ayudar
+  2. Si busca auto: pregunta qué marca o tipo le interesa, su presupuesto y si paga de contado o con crédito
+  3. Busca los autos que coincidan y describe las mejores opciones (máximo 2 a la vez)
+  4. Si le interesa alguno: ofrece agendar una cita para verlo en persona
+  5. Para agendar: pide nombre completo, teléfono, correo y el día y hora que le conviene
+  6. Confirma todos los datos antes de terminar la llamada
+
+  REGLAS:
+  - Siempre menciona el precio, el año y el kilometraje de cada auto
+  - Si preguntan por financiamiento, di "Manejamos opciones de crédito, en la cita te explicamos todo con detalle"
+  - Si no hay autos que coincidan exactamente, ofrece los más cercanos
+  - Nunca inventes información de un vehículo — si no la tienes, di que la confirmas
+  - Al final siempre confirma: nombre, teléfono, auto de interés y fecha de cita
+
+# --- PROMPT OUTBOUND (llamadas de seguimiento) ---
+outbound_prompt: |
+  Eres {agent.name} de {business.name}. Estás llamando a {lead.name} para darle seguimiento.
+
+  CONTEXTO:
+  - Vehículo de interés: {lead.interest}
+  - Última interacción: {lead.last_contact}
+  - Notas previas: {lead.notes}
+
+  OBJETIVO: Saber si sigue interesado y agendar una cita para que venga a ver el auto.
+
+  FLUJO:
+  1. Saluda con su nombre: "Hola {lead.name}, te habla {agent.name} de {business.name}"
+  2. Recuérdale su interés: "Te llamo porque mostraste interés en {lead.interest}"
+  3. Pregunta si sigue buscando auto y si tiene preguntas
+  4. Si sigue interesado: ofrece agendar cita para verlo
+  5. Si ya no: agradece y pregunta si conoce a alguien que busque auto
+
+  REGLAS:
+  - Si no contesta o pide que llames después, pregunta cuándo y anótalo
+  - Máximo dos minutos de llamada — sé directo pero amable
+  - No presiones si dice que no le interesa
+  - Menciona que tenemos opciones de crédito si preguntan por financiamiento
+
+# --- CAMPOS DEL CRM ---
+crm_fields:
+  product_fields:
+    - name: "Vehículo"
+      type: "title"
+    - name: "Precio"
+      type: "number"
+      format: "dollar"
+    - name: "Marca"
+      type: "select"
+    - name: "Modelo"
+      type: "rich_text"
+    - name: "Año"
+      type: "number"
+    - name: "Kilometraje"
+      type: "number"
+    - name: "Color"
+      type: "rich_text"
+    - name: "Transmisión"
+      type: "select"
+      options: ["Automático", "Manual"]
+    - name: "Estado"
+      type: "select"
+      options: ["Disponible", "Apartado", "Vendido"]
+
+  lead_extra_fields:
+    - name: "Vehículo de interés"
+      type: "rich_text"
+    - name: "Presupuesto máximo"
+      type: "number"
+      format: "dollar"
+    - name: "Tipo de pago"
+      type: "select"
+      options: ["Contado", "Crédito", "Enganche y mensualidades"]
+    - name: "Urgencia"
+      type: "select"
+      options: ["Inmediata", "1-2 semanas", "1 mes", "Solo explorando"]
+
+# --- VEHÍCULOS DE EJEMPLO ---
+sample_products:
+  - Vehículo: "Toyota Corolla 2020"
+    Precio: 245000
+    Marca: "Toyota"
+    Modelo: "Corolla"
+    Año: 2020
+    Kilometraje: 45000
+    Color: "Blanco"
+    Transmisión: "Automático"
+    Estado: "Disponible"
+  - Vehículo: "Honda Civic 2019"
+    Precio: 218000
+    Marca: "Honda"
+    Modelo: "Civic"
+    Año: 2019
+    Kilometraje: 62000
+    Color: "Gris"
+    Transmisión: "Automático"
+    Estado: "Disponible"
+  - Vehículo: "Nissan Versa 2021"
+    Precio: 195000
+    Marca: "Nissan"
+    Modelo: "Versa"
+    Año: 2021
+    Kilometraje: 28000
+    Color: "Rojo"
+    Transmisión: "Automático"
+    Estado: "Disponible"
+  - Vehículo: "Volkswagen Jetta 2018"
+    Precio: 185000
+    Marca: "Volkswagen"
+    Modelo: "Jetta"
+    Año: 2018
+    Kilometraje: 78000
+    Color: "Negro"
+    Transmisión: "Automático"
+    Estado: "Disponible"
+  - Vehículo: "Chevrolet Aveo 2022"
+    Precio: 175000
+    Marca: "Chevrolet"
+    Modelo: "Aveo"
+    Año: 2022
+    Kilometraje: 15000
+    Color: "Azul"
+    Transmisión: "Manual"
+    Estado: "Disponible"
+
+# --- ANÁLISIS POST-LLAMADA ---
+post_call_analysis: |
+  Analiza esta llamada de {business.name} (venta de autos seminuevos).
+  Evalúa:
+  1. Nivel de interés del prospecto (1-10)
+  2. Vehículo o tipo de auto que busca
+  3. Presupuesto aproximado
+  4. Forma de pago preferida (contado o crédito)
+  5. Urgencia de la compra
+  6. Probabilidad de cerrar (alta/media/baja)
+  7. Resumen en 2-3 oraciones
+  8. Siguiente acción recomendada

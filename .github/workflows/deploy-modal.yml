@@ -1,0 +1,70 @@
+name: Deploy to Modal
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'app/**'
+      - 'prompts/**'
+      - 'sofia.config.yaml'
+      - '.github/workflows/deploy-modal.yml'
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Modal
+        run: pip install modal
+
+      - name: Set Modal token
+        run: modal token set --token-id ${{ secrets.MODAL_TOKEN_ID }} --token-secret ${{ secrets.MODAL_TOKEN_SECRET }}
+
+      - name: Create Modal secret
+        run: |
+          modal secret create mega-sistema-credentials \
+            RETELL_API_KEY=${{ secrets.RETELL_API_KEY }} \
+            NOTION_API_KEY=${{ secrets.NOTION_API_KEY }} \
+            NOTION_PARENT_PAGE_ID=${{ secrets.NOTION_PARENT_PAGE_ID }} \
+            NOTION_PRODUCTS_DB_ID=${{ secrets.NOTION_PRODUCTS_DB_ID }} \
+            NOTION_LEADS_DB_ID=${{ secrets.NOTION_LEADS_DB_ID }} \
+            NOTION_CALLS_DB_ID=${{ secrets.NOTION_CALLS_DB_ID }} \
+            CAL_API_KEY=${{ secrets.CAL_API_KEY }} \
+            CAL_EVENT_TYPE_ID=${{ secrets.CAL_EVENT_TYPE_ID }} \
+            ANTHROPIC_API_KEY=${{ secrets.ANTHROPIC_API_KEY }} \
+            TWILIO_ACCOUNT_SID=${{ secrets.TWILIO_ACCOUNT_SID }} \
+            TWILIO_AUTH_TOKEN=${{ secrets.TWILIO_AUTH_TOKEN }} \
+            TWILIO_PHONE_NUMBER=${{ secrets.TWILIO_PHONE_NUMBER }} \
+            RETELL_INBOUND_AGENT_ID=${{ secrets.RETELL_INBOUND_AGENT_ID }} \
+            RETELL_OUTBOUND_AGENT_ID=${{ secrets.RETELL_OUTBOUND_AGENT_ID }} \
+          || modal secret create mega-sistema-credentials \
+            RETELL_API_KEY=${{ secrets.RETELL_API_KEY }} \
+            NOTION_API_KEY=${{ secrets.NOTION_API_KEY }} \
+            NOTION_PARENT_PAGE_ID=${{ secrets.NOTION_PARENT_PAGE_ID }} \
+            NOTION_PRODUCTS_DB_ID=${{ secrets.NOTION_PRODUCTS_DB_ID }} \
+            NOTION_LEADS_DB_ID=${{ secrets.NOTION_LEADS_DB_ID }} \
+            NOTION_CALLS_DB_ID=${{ secrets.NOTION_CALLS_DB_ID }} \
+            CAL_API_KEY=${{ secrets.CAL_API_KEY }} \
+            CAL_EVENT_TYPE_ID=${{ secrets.CAL_EVENT_TYPE_ID }} \
+            ANTHROPIC_API_KEY=${{ secrets.ANTHROPIC_API_KEY }} \
+            TWILIO_ACCOUNT_SID=${{ secrets.TWILIO_ACCOUNT_SID }} \
+            TWILIO_AUTH_TOKEN=${{ secrets.TWILIO_AUTH_TOKEN }} \
+            TWILIO_PHONE_NUMBER=${{ secrets.TWILIO_PHONE_NUMBER }} \
+            RETELL_INBOUND_AGENT_ID=${{ secrets.RETELL_INBOUND_AGENT_ID }} \
+            RETELL_OUTBOUND_AGENT_ID=${{ secrets.RETELL_OUTBOUND_AGENT_ID }} \
+            --force
+
+      - name: Deploy to Modal
+        run: modal deploy app/main.py
+
+      - name: Get deployment URL
+        run: |
+          echo "Deployment complete. Check your Modal dashboard for the URL."
+          echo "URL format: https://{workspace}--mega-sistema-ia-api.modal.run"

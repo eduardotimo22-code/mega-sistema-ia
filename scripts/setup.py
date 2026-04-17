@@ -159,10 +159,10 @@ def setup_retell(config: dict, template: dict) -> dict:
 
     # Crear LLM inbound
     inbound_llm = requests.post(
-        "https://api.retellai.com/v2/create-retell-llm",
+        "https://api.retellai.com/create-retell-llm",
         headers=headers,
         json={
-            "model": "claude-3-5-sonnet",
+            "model": "gpt-4o-mini",
             "general_prompt": get_inbound_prompt(),
         },
     )
@@ -171,12 +171,12 @@ def setup_retell(config: dict, template: dict) -> dict:
 
     # Crear agente inbound
     inbound_agent = requests.post(
-        "https://api.retellai.com/v2/create-agent",
+        "https://api.retellai.com/create-agent",
         headers=headers,
         json={
             "agent_name": f"{agent_name} — Inbound",
             "voice_id": voice_id,
-            "llm_websocket_url": inbound_llm_id,
+            "response_engine": {"type": "retell-llm", "llm_id": inbound_llm_id},
             "language": language,
         },
     )
@@ -186,10 +186,10 @@ def setup_retell(config: dict, template: dict) -> dict:
 
     # Crear LLM outbound
     outbound_llm = requests.post(
-        "https://api.retellai.com/v2/create-retell-llm",
+        "https://api.retellai.com/create-retell-llm",
         headers=headers,
         json={
-            "model": "claude-3-5-sonnet",
+            "model": "gpt-4o-mini",
             "general_prompt": get_outbound_prompt(),
         },
     )
@@ -198,12 +198,12 @@ def setup_retell(config: dict, template: dict) -> dict:
 
     # Crear agente outbound
     outbound_agent = requests.post(
-        "https://api.retellai.com/v2/create-agent",
+        "https://api.retellai.com/create-agent",
         headers=headers,
         json={
             "agent_name": f"{agent_name} — Outbound",
             "voice_id": voice_id,
-            "llm_websocket_url": outbound_llm_id,
+            "response_engine": {"type": "retell-llm", "llm_id": outbound_llm_id},
             "language": language,
         },
     )
@@ -222,7 +222,7 @@ def setup_retell(config: dict, template: dict) -> dict:
 # ── Paso 3: Configurar Twilio SIP trunk ──
 
 def setup_twilio(config: dict, retell_ids: dict) -> dict:
-    """Crea SIP trunk en Twilio y conecta el numero."""
+    """Verifica el numero de Twilio — la conexion la maneja Retell al importar el numero."""
     sid = os.environ.get("TWILIO_ACCOUNT_SID", "")
     token = os.environ.get("TWILIO_AUTH_TOKEN", "")
     phone = os.environ.get("TWILIO_PHONE_NUMBER", "")
@@ -231,28 +231,20 @@ def setup_twilio(config: dict, retell_ids: dict) -> dict:
         print("❌ Credenciales de Twilio incompletas en .env")
         return {}
 
-    print(f"\n📞 Configurando Twilio SIP trunk...")
+    print(f"\n📞 Verificando numero Twilio {phone}...")
 
-    from twilio.rest import Client
-    client = Client(sid, token)
-
-    # Crear SIP trunk
-    trunk = client.trunking.v1.trunks.create(
-        friendly_name=f"Mega Sistema IA — {config['business']['name']}",
+    resp = requests.get(
+        f"https://api.twilio.com/2010-04-01/Accounts/{sid}/IncomingPhoneNumbers.json",
+        auth=(sid, token),
+        params={"PhoneNumber": phone},
     )
 
-    # Agregar origination URI de Retell
-    trunk.origination_urls.create(
-        friendly_name="Retell AI",
-        sip_url="sip:+retellai.com",
-        priority=1,
-        weight=1,
-        enabled=True,
-    )
-
-    print(f"  ✅ SIP trunk creado: {trunk.sid}")
-
-    return {"trunk_sid": trunk.sid}
+    if resp.status_code == 200 and resp.json().get("incoming_phone_numbers"):
+        print(f"  ✅ Numero {phone} verificado en Twilio")
+        return {"phone_verified": True}
+    else:
+        print(f"  ⚠️ Numero {phone} no encontrado en la cuenta Twilio")
+        return {"phone_verified": False}
 
 
 # ── Paso 4: Importar numero en Retell ──
@@ -277,13 +269,14 @@ def setup_retell_phone(retell_ids: dict) -> dict:
     }
 
     resp = requests.post(
-        "https://api.retellai.com/v2/create-phone-number",
+        "https://api.retellai.com/import-phone-number",
         headers=headers,
         json={
             "phone_number": phone,
-            "agent_id": inbound_agent_id,
+            "termination_uri": "sip.retell.ai",
             "twilio_account_sid": sid,
             "twilio_auth_token": token,
+            "inbound_agent_id": inbound_agent_id,
         },
     )
 
