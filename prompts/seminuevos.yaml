@@ -152,6 +152,26 @@ sample_products:
     Transmisión: "Manual"
     Estado: "Disponible"
 
+# --- MENSAJES DE WHATSAPP POST-LLAMADA ---
+whatsapp_messages:
+  cita_confirmada: |
+    Hola {nombre_cliente} 👋 Te confirmamos tu cita en {business_name}.
+
+    📅 Fecha: {fecha}
+    🕐 Hora: {hora}
+
+    Te esperamos con gusto. Si necesitas cambiar o cancelar, avísanos con tiempo. — {agent_name}
+
+  seguimiento: |
+    Hola {nombre_cliente}, fue un placer hablar contigo hoy.
+
+    En {business_name} estamos para ayudarte a encontrar el auto ideal. Cuando quieras agendar tu visita o tienes alguna pregunta, escríbenos aquí. 🚗 — {agent_name}
+
+  primer_contacto: |
+    Hola 👋 Te escribimos de {business_name}. Intentamos comunicarnos contigo pero no pudimos.
+
+    Si estás buscando un auto seminuevo de calidad, con gusto te asesoramos. Escríbenos cuando puedas. — {agent_name}
+
 # --- ANÁLISIS POST-LLAMADA ---
 post_call_analysis: |
   Analiza esta llamada de {business.name} (venta de autos seminuevos).

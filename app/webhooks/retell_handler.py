@@ -103,11 +103,60 @@ def process_post_call(call_id: str) -> dict:
             )
             lead_id = lead["id"]
 
-    print(f"[{agent_name}] Post-call completo: call={call_id}, lead={lead_id}")
+    # 5. Enviar WhatsApp de seguimiento
+    wa_sid = _send_followup_whatsapp(phone=phone, analysis=analysis)
+
+    print(f"[{agent_name}] Post-call completo: call={call_id}, lead={lead_id}, wa={wa_sid}")
     return {
         "status": "ok",
         "call_id": call_id,
         "call_record_id": call_record["id"],
         "lead_id": lead_id,
         "analysis": analysis,
+        "whatsapp_sid": wa_sid,
     }
+
+
+def _send_followup_whatsapp(phone: str, analysis: dict) -> str | None:
+    """Elige el escenario correcto y envia el WhatsApp post-llamada."""
+    from app.config import BUSINESS, AGENT
+    from app.services import whatsapp_service
+
+    if not phone:
+        return None
+
+    nombre = analysis.get("nombre_cliente") or "Cliente"
+    cita_agendada = analysis.get("cita_agendada", False)
+    temperatura = (analysis.get("temperatura") or "").lower()
+    siguiente_accion = analysis.get("siguiente_accion", "")
+
+    # Extraer fecha/hora de cita de siguiente_accion si existe
+    # (el agente las escribe en texto libre, ej: "Cita agendada: lunes 21 a las 10am")
+    fecha = ""
+    hora = ""
+    if cita_agendada and siguiente_accion:
+        partes = siguiente_accion.replace(":", " ").split()
+        for i, p in enumerate(partes):
+            if p.lower() in ("lunes", "martes", "miercoles", "miércoles", "jueves",
+                             "viernes", "sabado", "sábado", "domingo") and not fecha:
+                fecha = " ".join(partes[i:i+3]) if i + 2 < len(partes) else p
+            if ("am" in p.lower() or "pm" in p.lower() or ":" in p) and not hora:
+                hora = p
+
+    variables = {
+        "nombre_cliente": nombre,
+        "business_name": BUSINESS.get("name", ""),
+        "agent_name": AGENT.get("name", "Sofia"),
+        "fecha": fecha or "la fecha confirmada",
+        "hora": hora or "el horario acordado",
+        "siguiente_accion": siguiente_accion,
+    }
+
+    if cita_agendada:
+        scenario = "cita_confirmada"
+    elif temperatura in ("hot", "warm"):
+        scenario = "seguimiento"
+    else:
+        scenario = "primer_contacto"
+
+    return whatsapp_service.send_post_call(phone=phone, scenario=scenario, variables=variables)

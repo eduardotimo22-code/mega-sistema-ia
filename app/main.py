@@ -280,6 +280,34 @@ def post_call_summary(request: dict):
     return process_post_call(call_id)
 
 
+@web_app.post("/send-whatsapp")
+def send_whatsapp(request: dict):
+    """Envia un WhatsApp manual a un numero.
+
+    Body: {"phone": "+521234567890", "scenario": "seguimiento", "variables": {...}}
+    scenario: cita_confirmada | seguimiento | primer_contacto
+    Si 'message' viene en el body, lo usa directamente ignorando el template.
+    """
+    from app.services import whatsapp_service
+
+    phone = request.get("phone", "")
+    message = request.get("message", "")
+    scenario = request.get("scenario", "seguimiento")
+    variables = request.get("variables", {})
+
+    if not phone:
+        return {"status": "error", "message": "Se necesita 'phone'"}
+
+    if message:
+        sid = whatsapp_service.send_message(phone, message)
+    else:
+        sid = whatsapp_service.send_post_call(phone=phone, scenario=scenario, variables=variables)
+
+    if sid:
+        return {"status": "ok", "sid": sid}
+    return {"status": "error", "message": "No se pudo enviar. Revisa TWILIO_WHATSAPP_NUMBER en el secreto de Modal."}
+
+
 @web_app.post("/trigger-outbound")
 def trigger_outbound():
     """Trigger manual del worker outbound."""

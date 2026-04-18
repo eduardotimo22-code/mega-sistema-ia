@@ -128,6 +128,25 @@ sample_products:
     type: "Terreno"
     operation: "Venta"
 
+# --- MENSAJES DE WHATSAPP POST-LLAMADA ---
+whatsapp_messages:
+  cita_confirmada: |
+    Hola {nombre_cliente} 🏠 Tu visita en {business_name} está confirmada.
+
+    📅 {fecha}  🕐 {hora}
+
+    Te esperamos para mostrarte la propiedad. Cualquier cambio avísanos. — {agent_name}
+
+  seguimiento: |
+    Hola {nombre_cliente}, fue un placer hablar contigo.
+
+    En {business_name} tenemos opciones que pueden interesarte. Cuando quieras agendar tu visita, aquí estamos 🔑 — {agent_name}
+
+  primer_contacto: |
+    Hola 👋 Te escribimos de {business_name}. Tratamos de comunicarnos contigo.
+
+    Si buscas propiedad, con gusto te asesoramos. Escríbenos cuando puedas. — {agent_name}
+
 # --- ANALISIS POST-LLAMADA ---
 post_call_analysis: |
   Analiza esta llamada de {business.name} (inmobiliaria).

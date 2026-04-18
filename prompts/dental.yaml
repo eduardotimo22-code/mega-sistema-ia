@@ -122,6 +122,25 @@ sample_products:
     category: "Endodoncia"
     includes: "Tratamiento de conducto, radiografia, medicamento"
 
+# --- MENSAJES DE WHATSAPP POST-LLAMADA ---
+whatsapp_messages:
+  cita_confirmada: |
+    Hola {nombre_cliente} 😊 Tu cita en {business_name} está confirmada.
+
+    📅 {fecha}  🕐 {hora}
+
+    Recuerda llegar 5 minutos antes. Si necesitas cambiar el horario, escríbenos. — {agent_name}
+
+  seguimiento: |
+    Hola {nombre_cliente}, gracias por comunicarte con {business_name}.
+
+    Quedamos a tus órdenes para agendar tu cita cuando gustes. Estamos aquí para cuidar tu sonrisa 🦷 — {agent_name}
+
+  primer_contacto: |
+    Hola 👋 Te escribimos de {business_name}. Intentamos contactarte pero no pudimos.
+
+    Si necesitas atención dental, con gusto te agendamos. Escríbenos cuando puedas. — {agent_name}
+
 # --- ANALISIS POST-LLAMADA ---
 post_call_analysis: |
   Analiza esta llamada de {business.name} (clinica dental).

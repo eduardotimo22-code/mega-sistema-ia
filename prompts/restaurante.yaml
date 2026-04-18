@@ -119,6 +119,25 @@ sample_products:
     description: "Menu ejecutivo, salon privado, proyector, cafe ilimitado"
     availability: "Solo eventos"
 
+# --- MENSAJES DE WHATSAPP POST-LLAMADA ---
+whatsapp_messages:
+  cita_confirmada: |
+    Hola {nombre_cliente} 🍽️ Tu reservación en {business_name} está confirmada.
+
+    📅 {fecha}  🕐 {hora}
+
+    Si el número de personas cambia o necesitas cancelar, avísanos con anticipación. ¡Te esperamos! — {agent_name}
+
+  seguimiento: |
+    Hola {nombre_cliente}, gracias por contactar a {business_name}.
+
+    Para reservar tu mesa o preguntar por nuestro menú, escríbenos aquí cuando gustes 🥂 — {agent_name}
+
+  primer_contacto: |
+    Hola 👋 Te escribimos de {business_name}. Intentamos comunicarnos contigo.
+
+    Si quieres hacer una reservación o preguntar por eventos, con gusto te atendemos. — {agent_name}
+
 # --- ANALISIS POST-LLAMADA ---
 post_call_analysis: |
   Analiza esta llamada de {business.name} (restaurante).

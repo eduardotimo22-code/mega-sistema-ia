@@ -95,6 +95,29 @@ def get_post_call_prompt() -> str:
     raw = TEMPLATE.get("post_call_analysis", "")
     return _replace_variables(raw)
 
+def get_whatsapp_message(scenario: str) -> str:
+    """Retorna el template de WhatsApp para el escenario dado."""
+    msgs = TEMPLATE.get("whatsapp_messages", {})
+    # Fallback a mensajes genericos si el template no los define
+    defaults = {
+        "cita_confirmada": (
+            "Hola {nombre_cliente}, te confirmo tu cita en {business_name} "
+            "para el {fecha} a las {hora}. "
+            "Cualquier duda estamos a tus ordenes. — {agent_name}"
+        ),
+        "seguimiento": (
+            "Hola {nombre_cliente}, te escribo de {business_name}. "
+            "Fue un placer hablar contigo. "
+            "Quedamos a tus ordenes para cuando quieras dar el siguiente paso. — {agent_name}"
+        ),
+        "primer_contacto": (
+            "Hola, te escribo de {business_name}. "
+            "Intentamos comunicarnos contigo. "
+            "Escribenos cuando puedas y con gusto te atendemos. — {agent_name}"
+        ),
+    }
+    return msgs.get(scenario) or defaults.get(scenario, "")
+
 def _replace_variables(text: str) -> str:
     """Reemplaza {agent.name}, {business.name}, etc. con valores del config."""
     replacements = {
@@ -130,3 +153,5 @@ CAL_API_KEY = os.environ.get("CAL_API_KEY", "")
 CAL_EVENT_TYPE_ID = os.environ.get("CAL_EVENT_TYPE_ID", "")
 
 ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
+
+TWILIO_WHATSAPP_NUMBER = os.environ.get("TWILIO_WHATSAPP_NUMBER", "")
