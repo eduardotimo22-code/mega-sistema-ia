@@ -185,7 +185,14 @@ def book_appointment(request: dict):
     preferred_time = args.get("preferred_time", "")
 
     if preferred_date and preferred_time:
+        # Normalizar tiempo a HH:MM antes de armar el ISO string
+        from app.services.calcom_service import _normalize_time
+        try:
+            preferred_time = _normalize_time(preferred_time)
+        except Exception:
+            pass  # si falla la normalizacion, usamos el valor tal cual
         start = f"{preferred_date}T{preferred_time}:00"
+        print(f"[book_appointment] name={name!r} email={email!r} start={start} event_type={event_type_id}")
 
         try:
             booking = create_booking(
@@ -195,8 +202,8 @@ def book_appointment(request: dict):
                 email=email,
             )
         except Exception as e:
-            # Critico: si Cal.com falla, NO confirmamos al cliente.
-            # El agente debe ser honesto y ofrecer seguimiento humano.
+            detail = str(e)[:300]
+            print(f"[book_appointment] FALLO Cal.com: {detail}")
             return {
                 "status": "error",
                 "message": (
@@ -204,7 +211,7 @@ def book_appointment(request: dict):
                     "honestamente que hubo un problema tecnico y que un asesor "
                     "humano se va a comunicar para confirmar la cita."
                 ),
-                "error_detail": str(e)[:300],
+                "error_detail": detail,
             }
 
         if phone:
