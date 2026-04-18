@@ -5,7 +5,7 @@ y el template de la industria para adaptarse a cualquier negocio.
 """
 
 import modal
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, Response
 
 app = modal.App("mega-sistema-ia")
 
@@ -45,8 +45,51 @@ def health():
 
 @web_app.post("/retell-webhook")
 def retell_webhook(request: dict):
-    from app.webhooks.retell_handler import handle_retell_event
-    return handle_retell_event(request)
+    import os as _os, requests as _req
+    event = request.get("event", "")
+    call_obj = request.get("call", {})
+    call_id = call_obj.get("call_id", "") if isinstance(call_obj, dict) else request.get("call_id", "")
+    print(f"[retell-webhook] event={event} call_id={call_id}")
+
+    if event == "call_ended" and call_id:
+        from app.webhooks.retell_handler import process_post_call
+        try:
+            return process_post_call(call_id)
+        except Exception as e:
+            print(f"[retell-webhook] post-call error: {e}")
+            return {"status": "error", "error": str(e)}
+
+    return {"status": "ok", "event": event}
+
+
+@web_app.post("/twilio-voice")
+async def twilio_voice(request: Request):
+    """Webhook de voz inbound de Twilio — registra en Retell y devuelve TwiML."""
+    import os, requests as req_lib
+    from urllib.parse import parse_qs
+    body = await request.body()
+    parsed = parse_qs(body.decode())
+    from_number = (parsed.get("From") or parsed.get("from") or [""])[0]
+    to_number = (parsed.get("To") or parsed.get("to") or [""])[0]
+    agent_id = os.environ.get("RETELL_INBOUND_AGENT_ID", "")
+    api_key = os.environ.get("RETELL_API_KEY", "")
+    print(f"[twilio-voice] from={from_number} to={to_number} agent={agent_id[:20]}")
+    try:
+        r = req_lib.post(
+            "https://api.retellai.com/v2/register-phone-call",
+            headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+            json={"agent_id": agent_id, "from_number": from_number, "to_number": to_number},
+            timeout=10,
+        )
+        r.raise_for_status()
+        call_id = r.json().get("call_id", "")
+        print(f"[twilio-voice] call_id={call_id}")
+        twiml = f'<?xml version="1.0" encoding="UTF-8"?><Response><Dial timeout="60" record="do-not-record"><Sip>sip:{call_id}@sip.retellai.com;transport=tcp</Sip></Dial></Response>'
+    except Exception as e:
+        err = str(e)[:150]
+        print(f"[twilio-voice] ERROR: {err}")
+        twiml = f'<?xml version="1.0" encoding="UTF-8"?><Response><Say language="es-MX">Error tecnico: {err}</Say></Response>'
+    return Response(content=twiml, media_type="application/xml")
 
 
 @web_app.post("/twilio-webhook")
@@ -57,21 +100,32 @@ def twilio_webhook(request: dict):
 
 @web_app.post("/search-products")
 def search_products(request: dict):
-    """Busca productos/servicios en el CRM.
-
-    Acepta un dict de filtros generico. Los campos dependen de la industria:
-    - inmobiliaria: {"Zona": "Polanco", "Tipo": "Casa"}
-    - dental: {"Categoria": "Ortodoncia"}
-    - gimnasio: {"Horario": "Completo"}
-    """
     from app.services.notion_service import search_products as _search
-
-    query = request.get("args", request).get("query", request.get("args", request))
-    # Remover keys que no son filtros
-    query.pop("query", None)
-    results = _search(query=query if query else None)
-
     from app.config import CRM_PRODUCT_NAME
+
+    # Retell envía args en snake_case — mapear a nombres reales de Notion
+    FIELD_MAP = {
+        "marca": "Marca", "transmision": "Transmisión", "transmisión": "Transmisión",
+        "estado": "Estado", "año": "Año", "anio": "Año", "color": "Color",
+        "modelo": "Modelo", "precio": "Precio",
+    }
+    TRANSMISION_MAP = {"automatico": "Automático", "manual": "Manual", "automatica": "Automático"}
+
+    raw = request.get("args", request)
+    if isinstance(raw, str):
+        import json as _json
+        raw = _json.loads(raw)
+    raw.pop("query", None)
+
+    query = {}
+    for k, v in raw.items():
+        notion_key = FIELD_MAP.get(k.lower(), k)
+        if notion_key == "Transmisión":
+            v = TRANSMISION_MAP.get(str(v).lower(), v)
+        if v:
+            query[notion_key] = v
+
+    results = _search(query=query if query else None)
     return {"status": "ok", "count": len(results), CRM_PRODUCT_NAME.lower(): results}
 
 
@@ -233,7 +287,7 @@ def trigger_outbound():
     return run_outbound_cycle()
 
 
-@app.function(image=image, secrets=[sofia_secret])
+@app.function(image=image, secrets=[sofia_secret], min_containers=1)
 @modal.asgi_app()
 def api():
     return web_app
